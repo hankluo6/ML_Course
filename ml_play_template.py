@@ -55,11 +55,10 @@ def ml_loop():
         # 3.3. Put the code here to handle the scene information
         fall_point = calculate_fall_point(last_ball_pos, ball_pos)
         #print(fall_point)
-        if fall_point > platform_pos[0] + platform_width / 2 - 20:
+        if fall_point > platform_pos[0] + platform_width / 2:
             action = PlatformAction.MOVE_RIGHT
         else:
             action = PlatformAction.MOVE_LEFT
-
         last_ball_pos = ball_pos
 
         # 3.4. Send the instruction for this frame to the game process
@@ -75,7 +74,7 @@ def calculate_fall_point(last_ball_pos, ball_pos):
     else:
         m = (last_ball_pos[1] - ball_pos[1]) / (last_ball_pos[0] - ball_pos[0])
         b = ball_pos[1] - m * ball_pos[0]
-        x = (375 - b) / m
+        x = (400 - b) / m
         print(x)
         if x < 200 and x > 0:
             return x
@@ -89,7 +88,7 @@ def calculate_fall_point(last_ball_pos, ball_pos):
                 if x > 400:
                     return x - 400
                 else:
-                    return x - 200
+                    return 200 - (x - 200)
             '''if m < 0: #move left
                 y = b
                 b = y + m * 0
