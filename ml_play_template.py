@@ -54,11 +54,12 @@ def ml_loop():
 
         # 3.3. Put the code here to handle the scene information
         fall_point = calculate_fall_point(last_ball_pos, ball_pos)
-        #print(fall_point)
         if fall_point > platform_pos[0] + platform_width / 2:
             action = PlatformAction.MOVE_RIGHT
-        else:
+        elif fall_point < platform_pos[0] + platform_width / 2:
             action = PlatformAction.MOVE_LEFT
+        else:
+            action = PlatformAction.NONE
         last_ball_pos = ball_pos
 
         # 3.4. Send the instruction for this frame to the game process
@@ -69,13 +70,12 @@ def ml_loop():
             comm.send_instruction(scene_info.frame, action)
 
 def calculate_fall_point(last_ball_pos, ball_pos):
-    if last_ball_pos[1] >= ball_pos[1]: #not falling
+    if last_ball_pos[1] >= ball_pos[1]: 
         return 100
     else:
         m = (last_ball_pos[1] - ball_pos[1]) / (last_ball_pos[0] - ball_pos[0])
         b = ball_pos[1] - m * ball_pos[0]
         x = (400 - b) / m
-        print(x)
         if x < 200 and x > 0:
             return x
         else: 
@@ -89,22 +89,3 @@ def calculate_fall_point(last_ball_pos, ball_pos):
                     return x - 400
                 else:
                     return 200 - (x - 200)
-            '''if m < 0: #move left
-                y = b
-                b = y + m * 0
-                x = (375 - b) / m
-                return x
-            else: #move right
-                y = m * 200 + b
-                b = y + m * 200
-                x = (375 - b) / m
-                return x'''
-        '''vector = (Vector2(ball_pos[0] - last_ball_pos[0], ball_pos[1] - last_ball_pos[1])).normalize()
-        while (vector.x > 0 and vector.x < 200) or vector.y < 375:
-            vector += vector
-        if vector.y > 375:
-            return vector.x
-        else:
-            while vector.y < 375:
-                vector.update(-vector.x, vector.y)
-        return vector.x'''
