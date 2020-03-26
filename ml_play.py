@@ -63,8 +63,7 @@ def ml_loop():
         last_ball_pos = ball_pos
 
         # 3.4. Send the instruction for this frame to the game process
-        #if not ball_served:
-        if True:
+        if not ball_served:
             comm.send_instruction(scene_info.frame, PlatformAction.SERVE_TO_LEFT)
             ball_served = True
         else:
