@@ -34,7 +34,7 @@ def ml_loop():
     filename = path.join(path.dirname(__file__), 'save', 'clf_knn_model.pickle')
     with open(filename, 'rb') as file:
         clf = pickle.load(file)
-    filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'KNN_Scaler.pickle')
     with open(filename, 'rb') as file:
         scaler = pickle.load(file)
     clf.n_jobs = 1
