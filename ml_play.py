@@ -68,7 +68,7 @@ def ml_loop():
         s = [feature[0], feature[1]]
         feature = np.array(feature)
         feature = feature.reshape((-1,4))
-        '''feature = scaler.transform(feature)'''
+        feature = scaler.transform(feature)
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
         if scene_info.status == GameStatus.GAME_OVER or \
