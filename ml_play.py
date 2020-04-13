@@ -31,9 +31,9 @@ def ml_loop():
     # === Here is the execution order of the loop === #
     # 1. Put the initialization code here.
     ball_served = False    
-    filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
+    '''filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
     with open(filename, 'rb') as file:
-        clf = pickle.load(file)
+        clf = pickle.load(file)'''
     '''filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
     with open(filename, 'rb') as file:
         scaler = pickle.load(file)'''
@@ -59,7 +59,7 @@ def ml_loop():
     while True:
         # 3.1. Receive the scene information sent from the game process.
         scene_info = comm.get_scene_info()
-        feature = []
+        '''feature = []
         feature.append(scene_info.ball[0])
         feature.append(scene_info.ball[1])
         feature.append(scene_info.platform[0])
@@ -68,7 +68,7 @@ def ml_loop():
         s = [feature[0], feature[1]]
         feature = np.array(feature)
         feature = feature.reshape((-1,4))
-        feature = scaler.transform(feature)
+        feature = scaler.transform(feature)'''
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
         if scene_info.status == GameStatus.GAME_OVER or \
