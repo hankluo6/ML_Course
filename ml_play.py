@@ -10,10 +10,10 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import pickle
 from os import path
-'''from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import RobustScaler'''
+from sklearn.preprocessing import RobustScaler
 
 
 def ml_loop():
