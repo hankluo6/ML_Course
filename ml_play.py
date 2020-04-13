@@ -34,9 +34,9 @@ def ml_loop():
     #filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
     #with open(filename, 'rb') as file:
         #clf = pickle.load(file)
-    #filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
-    #with open(filename, 'rb') as file:
-        #scaler = pickle.load(file)
+    filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
+    with open(filename, 'rb') as file:
+        scaler = pickle.load(file)
     #clf.n_jobs = 1
     s = [93, 93]
     def get_direction(ball_x, ball_y, ball_pre_x, ball_pre_y):
