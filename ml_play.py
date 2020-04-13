@@ -83,7 +83,8 @@ def ml_loop():
         # 3.3. Put the code here to handle the scene information
 
         # 3.4. Send the instruction for this frame to the game process
-        if not ball_served:
+        comm.send_instruction(scene_info.frame, PlatformAction.NONE)
+        '''if not ball_served:
             comm.send_instruction(scene_info.frame, PlatformAction.SERVE_TO_LEFT)
             ball_served = True
         else:
@@ -97,6 +98,6 @@ def ml_loop():
                 print('LEFT')
             elif y == 2:
                 comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-                print('RIGHT')
+                print('RIGHT')'''
 
 
