@@ -31,13 +31,13 @@ def ml_loop():
     # === Here is the execution order of the loop === #
     # 1. Put the initialization code here.
     ball_served = False    
-    '''filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
     with open(filename, 'rb') as file:
         clf = pickle.load(file)'''
     '''filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
     with open(filename, 'rb') as file:
-        scaler = pickle.load(file)'''
-    #clf.n_jobs = 1
+        scaler = pickle.load(file)
+    clf.n_jobs = 1
     s = [93, 93]
     def get_direction(ball_x, ball_y, ball_pre_x, ball_pre_y):
             VectorX = ball_x - ball_pre_x
