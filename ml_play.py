@@ -10,10 +10,10 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import pickle
 from os import path
-from sklearn.ensemble import RandomForestClassifier
+'''from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler'''
 
 
 def ml_loop():
@@ -34,10 +34,10 @@ def ml_loop():
     filename = path.join(path.dirname(__file__), 'save', 'clf_KMeans_BallAndDirection_random.pickle')
     with open(filename, 'rb') as file:
         clf = pickle.load(file)
-    filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
+    '''filename = path.join(path.dirname(__file__), 'save', 'Random_Scaler.pickle')
     with open(filename, 'rb') as file:
-        scaler = pickle.load(file)
-    clf.n_jobs = 1
+        scaler = pickle.load(file)'''
+    #clf.n_jobs = 1
     s = [93, 93]
     def get_direction(ball_x, ball_y, ball_pre_x, ball_pre_y):
             VectorX = ball_x - ball_pre_x
