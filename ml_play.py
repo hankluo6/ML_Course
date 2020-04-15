@@ -64,13 +64,14 @@ def ml_loop():
         feature.append(scene_info.ball[1])
         feature.append(scene_info.platform[0])
         #record repeat and move when ball collide the platform 
-        #feature.append(feature[0] - s[0])
-        #feature.append(feature[1] - s[1])
+        feature.append(feature[0] - s[0])
+        feature.append(feature[1] - s[1])
         feature.append(get_direction(feature[0],feature[1],s[0],s[1]))
         s = [feature[0], feature[1]]
         feature = np.array(feature)
-        feature = feature.reshape((-1,4))
+        feature = feature.reshape((-1,6))
         feature = scaler.transform(feature)
+        print(feature)
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
         if scene_info.status == GameStatus.GAME_OVER or \
