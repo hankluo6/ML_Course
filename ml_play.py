@@ -34,7 +34,7 @@ def ml_loop():
     filename = path.join(path.dirname(__file__), 'save', 'clf_random_forest_model2.pickle')
     with open(filename, 'rb') as file:
         clf = pickle.load(file)
-    filename = path.join(path.dirname(__file__), 'save', 'random_scaler.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'random_scaler2.pickle')
     with open(filename, 'rb') as file:
         scaler = pickle.load(file)
     clf.n_jobs = 1
