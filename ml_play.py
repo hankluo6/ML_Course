@@ -10,10 +10,8 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import pickle
 from os import path
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import RobustScaler
+from sklearn.externals import joblib
 
 
 def ml_loop():
@@ -33,7 +31,7 @@ def ml_loop():
     ball_served = False    
     filename = path.join(path.dirname(__file__), 'save', 'clf_knn_model.pickle')
     with open(filename, 'rb') as file:
-        clf = pickle.load(file)
+        clf = joblib.load(file)
     filename = path.join(path.dirname(__file__), 'save', 'knn_scaler.pickle')
     with open(filename, 'rb') as file:
         scaler = pickle.load(file)
@@ -71,7 +69,6 @@ def ml_loop():
         feature = np.array(feature)
         feature = feature.reshape((-1,6))
         feature = scaler.transform(feature)
-        print(feature)
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
         if scene_info.status == GameStatus.GAME_OVER or \
