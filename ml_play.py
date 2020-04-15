@@ -31,7 +31,7 @@ def ml_loop():
     # === Here is the execution order of the loop === #
     # 1. Put the initialization code here.
     ball_served = False    
-    filename = path.join(path.dirname(__file__), 'save', 'clf_random_forest_model.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'clf_random_forest_model2.pickle')
     with open(filename, 'rb') as file:
         clf = pickle.load(file)
     filename = path.join(path.dirname(__file__), 'save', 'random_scaler.pickle')
@@ -53,7 +53,7 @@ def ml_loop():
 
     # 2. Inform the game process that ml process is ready before start the loop.
     comm.ml_ready()
-
+    clf.verbose = 0
     # 3. Start an endless loop.
         # 3. Start an endless loop.
     while True:
@@ -64,10 +64,12 @@ def ml_loop():
         feature.append(scene_info.ball[1])
         feature.append(scene_info.platform[0])
         #record repeat and move when ball collide the platform 
+        feature.append(feature[0] - s[0])
+        feature.append(feature[1] - s[1])
         feature.append(get_direction(feature[0],feature[1],s[0],s[1]))
         s = [feature[0], feature[1]]
         feature = np.array(feature)
-        feature = feature.reshape((-1,4))
+        feature = feature.reshape((-1,6))
         feature = scaler.transform(feature)
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
@@ -91,12 +93,12 @@ def ml_loop():
             
             if y == 0:
                 comm.send_instruction(scene_info.frame, PlatformAction.NONE)
-                print('NONE')
+                #print('NONE')
             elif y == 1:
                 comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)
-                print('LEFT')
+                #print('LEFT')
             elif y == 2:
                 comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-                print('RIGHT')
+                #print('RIGHT')
 
 
