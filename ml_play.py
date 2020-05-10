@@ -9,7 +9,7 @@ import random
 from mlgame.gamedev import physics
 from pygame import Rect
 from pygame.math import Vector2
-
+import torch
 
 
 def ml_loop(side: str):
@@ -106,6 +106,7 @@ def ml_loop(side: str):
                 fall_point = 180
             if scene_info['ball'][1] + scene_info['ball_speed'][1] <= 80 and fall_point == scene_info["platform_2P"][0] + 20:
                 case = chooseCase(d, 80, nextBlockDirection, blockPosX, scene_info, speed, nextFrames)
+                #case = random.choice([1, 2, 3])
                 if case == 1:
                     action = 1 if scene_info["ball_speed"][0] > 0 else 2
                 elif case == 2:
