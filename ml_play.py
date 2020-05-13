@@ -24,7 +24,7 @@ def ml_loop(side: str):
     ```
     @param side The side which this script is executed for. Either "1P" or "2P".
     """
-    class Model(nn.Module):
+    class Model(nn.Module): #model4
         def __init__(self, input_shape):
             super().__init__()
             self.nn1 = nn.Linear(input_shape, 128)
@@ -39,6 +39,21 @@ def ml_loop(side: str):
             x = F.relu(self.nn4(x))
             x = self.nn5(x)
             return x
+            
+ 
+    '''class Model(nn.Module): #model5
+        def __init__(self, input_shape):
+            super().__init__()
+            self.nn1 = nn.Linear(input_shape, 256)
+            self.nn2 = nn.Linear(256, 512)
+            self.nn3 = nn.Linear(512, 1024)
+            self.nn4 = nn.Linear(1024, 3)
+        def forward(self, x):
+            x = F.relu(self.nn1(x))
+            x = F.relu(self.nn2(x))
+            x = F.relu(self.nn3(x))
+            x = self.nn4(x)
+            return x'''
     class ActionModel(nn.Module):
         def __init__(self, input_shape):
             super().__init__()
@@ -52,15 +67,15 @@ def ml_loop(side: str):
     # 1. Put the initialization code here
     ball_served = False
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    filename = path.join(path.dirname(__file__), 'save', 'model4.ckpt')
+    filename = path.join(path.dirname(__file__), 'save', 'model.ckpt')
     model = Model(6).to(device)
     model.load_state_dict(torch.load(filename))
-    filename = path.join(path.dirname(__file__), 'save', 'nn_scaler4.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'nn_scaler.pickle')
     scaler = joblib.load(filename) 
-    filename = path.join(path.dirname(__file__), 'save', 'ActionModel2.ckpt')
+    filename = path.join(path.dirname(__file__), 'save', 'ActionModel.ckpt')
     actionModel = ActionModel(5).to(device)
     actionModel.load_state_dict(torch.load(filename))
-    filename = path.join(path.dirname(__file__), 'save', 'ActionNN_scaler2.pickle')
+    filename = path.join(path.dirname(__file__), 'save', 'ActionNN_scaler.pickle')
     actionScaler = joblib.load(filename) 
 
     direction = True
@@ -77,11 +92,27 @@ def ml_loop(side: str):
             else : return 2 # goes left
 
     def ml_loop_for_1P():
+        '''if scene_info['ball_speed'][0] > 0 and scene_info['ball_speed'][1] > 0:
+            ballDirection = 0
+        if scene_info['ball_speed'][0] > 0 and scene_info['ball_speed'][1] < 0:
+            ballDirection = 1
+        if scene_info['ball_speed'][0] < 0 and scene_info['ball_speed'][1] > 0:
+            ballDirection = 2
+        if scene_info['ball_speed'][0] < 0 and scene_info['ball_speed'][1] < 0:
+            ballDirection = 3'''
         x = scene_info['ball'] + scene_info['ball_speed'] + (scene_info['blocker'][0],) + ((1,) if direction else (0,))
+        #x = scene_info['ball'] + scene_info['ball_speed'] + (scene_info['platform_1P'][0],) + (scene_info['blocker'][0],) + ((1,) if direction else (0,)) + (ballDirection,)
         x = torch.tensor(x).reshape(1, -1)
         x = scaler.transform(x)
         x = torch.tensor(x).reshape(1, -1).float()
         y = model(x)
+        '''y = torch.max(y, 1)[1]
+        if y == 0:
+            return 0
+        elif y == 1:
+            return 1
+        else:
+            return 2'''
         y = 5 * round(y.item() / 5.0)
         if y < 0:
             y = 0
@@ -94,6 +125,7 @@ def ml_loop(side: str):
             x = torch.tensor(x).reshape(1, -1).float()
             case = actionModel(x)
             case = torch.max(case, 1)
+            case = case[1].item()
             if case == 0:
                 return 1
             elif case == 1:
