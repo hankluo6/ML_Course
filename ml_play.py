@@ -87,7 +87,7 @@ def ml_loop(side: str):
             y = 0
         elif y > 195:
             y = 195
-        if scene_info['ball'][1] >= 415 - scene_info['ball_speed'][1] and scene_info["platform_1P"][0] < y < scene_info["platform_1P"][0] + 40:
+        if scene_info['ball'][1] >= 415 - scene_info['ball_speed'][1]:
             x = (scene_info['ball'][0],) + scene_info['ball_speed'] + (scene_info['blocker'][0],) + ((1,) if direction else (0,))
             x = torch.tensor(x).reshape(1, -1)
             x = actionScaler.transform(x)
