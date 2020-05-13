@@ -15,7 +15,6 @@ import torch
 def ml_loop(side: str):
     """
     The main loop for the machine learning process
-
     The `side` parameter can be used for switch the code for either of both sides,
     so you can write the code for both sides in the same script. Such as:
     ```python
@@ -24,7 +23,6 @@ def ml_loop(side: str):
     else:
         ml_loop_for_2P()
     ```
-
     @param side The side which this script is executed for. Either "1P" or "2P".
     """
 
@@ -32,15 +30,12 @@ def ml_loop(side: str):
     # 1. Put the initialization code here
 
     # 2. Inform the game process that ml process is ready
-    NEED_SLICE = True
     ball_served = False
     platform_1P_y = 420
     platform_2P_y = 50
-    random.seed = 2
     lastX, lastY, x, y = 100, 415, 100, 415
     blockDirection = True
     comm.ml_ready()
-
     # 3. Start an endless loop
     while True:
         # 3.1. Receive the scene information sent from the game process
@@ -73,22 +68,35 @@ def ml_loop(side: str):
         xRect = Rect(70, 247, 5, 5)
         blockRect = Rect(160, 240, 30, 20)
         if side == '1P':
-            #print(scene_info['ball'], scene_info['blocker'], scene_info['frame'])
+            #print(scene_info['ball'], scene_info['blocker'], scene_info['frame'], scene_info['platform_1P'])
             times = (2 if scene_info['ball_speed'][1] < 0 else 1)
-            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times, scene_info['frame'])
+            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames, _, _, _ = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times)
             fall_point = 5 * round(fall_point / 5.0)
             if fall_point < 20:
                 fall_point = 20
             elif fall_point > 180:
                 fall_point = 180
-            if scene_info['ball'][1] + 5 >= 420 - scene_info['ball_speed'][1] and fall_point == scene_info["platform_1P"][0] + 20:
-                case = chooseCase(d, 415, nextBlockDirection, blockPosX, scene_info, speed, nextFrames)
-                if case == 1:
+            if scene_info['ball'][1] + 5 >= 420 - scene_info['ball_speed'][1] and scene_info["platform_1P"][0] < fall_point < scene_info["platform_1P"][0] + 40:
+                case = chooseCase(d, 415, nextBlockDirection, blockPosX, scene_info, speed, scene_info['ball_speed'][1], fall_point, side)
+                action = -1
+                for i in case:
+                    if i == 1 and scene_info['platform_1P'][0] != 0:
+                        action = 1 if scene_info["ball_speed"][0] > 0 else 2
+                        break
+                    elif i == 3 and scene_info['platform_1P'][0] != 160:
+                        action = 1 if scene_info["ball_speed"][0] < 0 else 2
+                        break
+                    elif i == 2:
+                        action = 0
+                        break
+                if action == -1:
+                    action = case[-1]
+                '''if case == 1:
                     action = 1 if scene_info["ball_speed"][0] > 0 else 2
                 elif case == 2:
                     action = 0
                 else:
-                    action = 1 if scene_info["ball_speed"][0] < 0 else 2
+                    action = 1 if scene_info["ball_speed"][0] < 0 else 2'''
             elif fall_point > scene_info["platform_1P"][0] + 20:
                 action = 1
             elif fall_point < scene_info["platform_1P"][0] + 20:
@@ -98,15 +106,28 @@ def ml_loop(side: str):
         else:
             times = (2 if scene_info['ball_speed'][1] > 0 else 1)
             #print(scene_info['ball'], scene_info['blocker'])
-            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times, scene_info['frame'])
+            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames, _, _, _ = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times)
             fall_point = 5 * round(fall_point / 5.0)
             if fall_point < 20:
                 fall_point = 20
             elif fall_point > 180:
                 fall_point = 180
-            if scene_info['ball'][1] + scene_info['ball_speed'][1] <= 80 and fall_point == scene_info["platform_2P"][0] + 20:
-                case = chooseCase(d, 80, nextBlockDirection, blockPosX, scene_info, speed, nextFrames)
-                #case = random.choice([1, 2, 3])
+            if scene_info['ball'][1] + scene_info['ball_speed'][1] <= 80 and scene_info["platform_2P"][0] < fall_point < scene_info["platform_2P"][0] + 40: #edit
+                #case = chooseCase(d, 80, nextBlockDirection, blockPosX, scene_info, speed, scene_info['ball_speed'][1], fall_point, '2P')
+                case = random.choice([1, 2, 3])
+                '''action = -1
+                for i in case:
+                    if i == 1 and scene_info['platform_2P'][0] != 0:
+                        action = 1 if scene_info["ball_speed"][0] > 0 else 2
+                        break
+                    elif i == 3 and scene_info['platform_2P'][0] != 160:
+                        action = 1 if scene_info["ball_speed"][0] < 0 else 2
+                        break
+                    elif i == 2:
+                        action = 0
+                        break
+                if action == -1:
+                    action = case[-1]'''
                 if case == 1:
                     action = 1 if scene_info["ball_speed"][0] > 0 else 2
                 elif case == 2:
@@ -205,13 +226,14 @@ def old_predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, 
         pred = 195
     return pred, Rpred, blockDirection, blockPosX, speedX, bomb, num
 
-def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side = '2P'):
+def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, side = '2P'):
     pred = 0
     bomb = False
-    num = frames
+    num = 0 #need delete
     collide = False
+    mini, maxi = 100, 100
     if speedX == 0 or speedY == 0:
-        return 100, 100, blockDirection, blockPosX, speedX, bomb, num
+        return 100, 100, blockDirection, blockPosX, speedX, bomb, num, True, 100, 100
     while times > 0:
         t = False
         if speedY > 0: # move down
@@ -306,16 +328,38 @@ def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side
                                 normalSpeed = speedX if not s else speedX + 3
                             if not collide:
                                 record = []
-                                record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                t = predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                mini = 1000
+                                maxi = -1000
+                                for i in record:
+                                    if i[0] < mini:
+                                        mini = i[0]
+                                    if i[0] > maxi:
+                                        maxi = i[0]
+                                #pred = (mini + maxi) / 2.0
+                                #record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
                                 #pred = (record[0][0], record[1][0], record[2][0]) / 3.0
-                                pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
-                                Rpred = pred
-                                blockDirection, blockPosX, speedX, bomb, num = record[0][2:]
+                                #pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
+                                #Rpred = pred
+                                if len(record) == 0:
+                                    return 100, 100, True, 0, 0, True, 0, False, 100, 100
+                                else:
+                                    pred, Rpred = (mini + maxi) / 2.0, (mini + maxi) / 2.0
+                                    blockDirection, blockPosX, speedX, bomb, num = record[0][2:-3]
                             else:
                                 #prevent recirsive overflow
-                                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                #pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                return 100, 100, True, 0, 0, True, 0, False, 100, 100
                             times = 0
                         else:
                             remainder = 415 - (y + p_length * speedY)
@@ -347,16 +391,39 @@ def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side
                                 normalSpeed = speedX if not s else speedX + 3
                             if not collide:
                                 record = [] 
-                                record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                t = predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                mini = 1000
+                                maxi = -1000
+                                for i in record:
+                                    if i[0] < mini:
+                                        mini = i[0]
+                                    if i[0] > maxi:
+                                        maxi = i[0]
+                                pred = (mini + maxi) / 2.0
+                                #record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
                                 #pred = (record[0][0], record[1][0], record[2][0]) / 3.0
-                                pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
+                                #pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
                                 Rpred = pred
-                                blockDirection, blockPosX, speedX, bomb, num = record[0][2:]
+                                if len(record) == 0:
+                                    return 100, 100, True, 0, 0, True, 0, False, 100, 100
+                                else:
+                                    pred, Rpred = (mini + maxi) / 2.0, (mini + maxi) / 2.0
+                                    blockDirection, blockPosX, speedX, bomb, num = record[0][2:-3]
                             else:
                                 #prevent recirsive overflow
-                                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                #pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                #_, _, _, _, _, _, _, False = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                return 100, 100, True, 0, 0, True, 0, False, 100, 100
                             times = 0
                         else:
                             remainder = 415 - (y + p_length * speedY)
@@ -456,16 +523,37 @@ def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side
                                 normalSpeed = speedX if not s else speedX + 3
                             if not collide:
                                 record = [] 
-                                record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                t = predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                mini = 1000
+                                maxi = -1000
+                                for i in record:
+                                    if i[0] < mini:
+                                        mini = i[0]
+                                    if i[0] > maxi:
+                                        maxi = i[0]
+                                #record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
                                 #pred = (record[0][0], record[1][0], record[2][0]) / 3.0
-                                pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
-                                Rpred = pred
-                                blockDirection, blockPosX, speedX, bomb, num = record[0][2:]
+                                #pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
+                                if len(record) == 0:
+                                    return 100, 100, True, 0, 0, True, 0, False, 100, 100
+                                else:
+                                    pred, Rpred = (mini + maxi) / 2.0, (mini + maxi) / 2.0
+                                    blockDirection, blockPosX, speedX, bomb, num = record[0][2:-3]
+                                    #print(mini, maxi)
                             else:
                                 #prevent recirsive overflow
-                                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                #pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                return 100, 100, True, 0, 0, True, 0, False, 100, 100
                             times = 0
                         else:
                             remainder = (y + p_length * speedY) - 80
@@ -497,16 +585,37 @@ def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side
                                 normalSpeed = speedX if not s else speedX + 3
                             if not collide:
                                 record = [] 
-                                record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
-                                record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                t = predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                t = predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num)
+                                if t[-1] != False:
+                                    record.append(t)
+                                mini = 1000
+                                maxi = -1000
+                                for i in record:
+                                    if i[0] < mini:
+                                        mini = i[0]
+                                    if i[0] > maxi:
+                                        maxi = i[0]
+                                #record.append(predict(newX, newY, sliceSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
+                                #record.append(predict(newX, newY, -normalSpeed, -speedY, blockDirection, blockPosX, 1, num))
                                 #pred = (record[0][0], record[1][0], record[2][0]) / 3.0
-                                pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
-                                Rpred = pred
-                                blockDirection, blockPosX, speedX, bomb, num = record[0][2:]
+                                #pred = (min(record[0][0], record[1][0], record[2][0]) + max(record[0][0], record[1][0], record[2][0])) / 2.0
+                                if len(record) == 0:
+                                    return 100, 100, True, 0, 0, True, 0, False, 100, 100
+                                else:
+                                    pred, Rpred = (mini + maxi) / 2.0, (mini + maxi) / 2.0
+                                    blockDirection, blockPosX, speedX, bomb, num = record[0][2:-3]
+                                    #print(mini, maxi)
                             else:
                                 #prevent recirsive overflow
-                                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                #pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(newX, newY, speedX, -speedY, blockDirection, blockPosX, 1, num)
+                                return 100, 100, True, 0, 0, True, 0, False, 100, 100
                             times = 0
                         else:
                             remainder = (y + p_length * speedY) - 80
@@ -518,12 +627,11 @@ def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side
         pred = 0
     if pred > 195:
         pred = 195
-    return pred, Rpred, blockDirection, blockPosX, speedX, bomb, num
+    return pred, Rpred, blockDirection, blockPosX, speedX, bomb, num, True, mini, maxi
 
 def moving_collide_or_contact(lastRect, curMoveRect, spriteRect):
     """
     Check if the moving sprite collides or contacts another sprite.
-
     @param moving_sprite The sprite that moves in the scene.
            It must contain `rect` and `last_pos` attributes, which both are `pygame.Rect`.
     @param sprite The sprite that will be collided or contacted by `moving_sprite`.
@@ -553,9 +661,7 @@ def bounce_off_ip(x, y, speedX, speedY, blockDirection, blockPosX):
     """
     Calculate the speed and position of the `bounce_obj` after it bounces off the `hit_obj`.
     The position of `bounce_obj_rect` and the value of `bounce_obj_speed` will be updated.
-
     This function should be called only when two objects are colliding.
-
     @param bounce_obj_rect The Rect of the bouncing object
     @param bounce_obj_speed The 2D speed vector of the bouncing object.
     @param hit_obj_rect The Rect of the hit object
@@ -614,7 +720,6 @@ def bounce_off_ip(x, y, speedX, speedY, blockDirection, blockPosX):
 def line_intersect(line_a, line_b) -> bool:
     """
     Check if two line segments intersect
-
     @param line_a A tuple (Vector2, Vector2) representing both end points
            of line segment
     @param line_b Same as `line_a`
@@ -661,7 +766,6 @@ def rect_collideline(rect: Rect, line) -> bool:
 
     """
     Check if line segment intersects with a rect
-
     @param rect The Rect of the target rectangle
     @param line A tuple (Vector2, Vector2) representing both end points
            of line segment
@@ -680,7 +784,9 @@ def rect_collideline(rect: Rect, line) -> bool:
         line_intersect(line_left, line) or
         line_intersect(line_right, line))
 
-def chooseCase(x, y, blockDirection, blockPosX, scene_info, speed, frames):
+def chooseCase(x, y, blockDirection, blockPosX, scene_info, speed, speedY, fall_point, side = '2P'):
+    if speed == 0 or speedY == 0:
+        return [1]
     s = (True if abs(scene_info['ball_speed'][0]) != abs(scene_info['ball_speed'][1]) else False)
     if speed > 0:
         sliceSpeed = speed if s else speed + 3
@@ -688,15 +794,58 @@ def chooseCase(x, y, blockDirection, blockPosX, scene_info, speed, frames):
     else:
         sliceSpeed = speed if s else speed - 3
         normalSpeed = speed if not s else speed + 3
-    _, _, _, _, _, bomb, _ = predict(x, y, sliceSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
+    '''_, _, _, _, _, bomb, _, c= predict(x, y, sliceSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
     case = 1
     if bomb:
-        _, _, _, _, _, bomb, _ = predict(x, y, normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
+        _, _, _, _, _, bomb, _, c = predict(x, y, normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
         case = 2
     if bomb:
-        _, _, _, _, _, bomb, _= predict(x, y, -normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
-        case = 3
-    return case
+        _, _, _, _, _, bomb, _, c = predict(x, y, -normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2, frames)
+        case = 3'''
+    ans = []
+    length = math.ceil((415 - 80) / float(abs(speedY))) * 2
+    length2 = math.ceil((415 - 260) / float(abs(speedY))) * 2
+    pred, _, _, _, _, bomb1, _, c1, mini, maxi = predict(x, y, sliceSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2)
+    mid = (mini + maxi) / 2.0
+    if c1:
+        if bomb1 and abs(x - pred) < length2 * 3:
+            ans.append(1)
+        elif not bomb1 and max(abs(x - mini), abs(x - maxi)) < length * 3 and abs(x - mid) < length * 3 / 2 and abs(max(abs(x - mini), abs(x - maxi)) - mid) < length * 3 / 2:
+            ans.append(1)
+    pred, _, _, _, _, bomb2, _, c2, mini, maxi = predict(x, y, normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2)
+    mid = (mini + maxi) / 2.0
+    if c2:
+        if not bomb2 and bomb2 and abs(x - pred) < length2 * 3:
+            ans.append(2)
+        elif max(abs(x - mini), abs(x - maxi)) < length * 3 and abs(x - mid) < length * 3 / 2 and abs(max(abs(x - mini), abs(x - maxi)) - mid) < length * 3 / 2:
+            ans.append(2)
+    pred, _, _, _, _, bomb3, _, c3, mini, maxi = predict(x, y, -normalSpeed, -scene_info['ball_speed'][1], blockDirection, blockPosX, 2)
+    mid = (mini + maxi) / 2.0
+    if c3:
+        if bomb3 and abs(x - pred) < length2 * 3:
+            ans.append(3)
+        elif not bomb3 and max(abs(x - mini), abs(x - maxi)) < length * 3 and abs(x - mid) < length * 3 / 2 and abs(max(abs(x - mini), abs(x - maxi)) - mid) < length * 3 / 2:
+            ans.append(3)
+    if len(ans) != 0:
+        return ans
+    if not c1:
+        ans.append(1)
+    if not c2:
+        ans.append(2)
+    if not c3:
+        ans.append(3)
+    if len(ans) != 0:
+        return ans
+    if not bomb1:
+        ans.append(1)
+    if not bomb2:
+        ans.append(2)
+    if not bomb3:
+        ans.append(3)
+    if len(ans) != 0:
+        return ans
+    return [2]
+    #choose the distance smaller
 
 def predict_blocker(blockDirection, blockPosX, length):
     while length > 0:
@@ -710,4 +859,3 @@ def predict_blocker(blockDirection, blockPosX, length):
             blockPosX = blockPosX + (3 if blockDirection else -3)
         length -= 1
     return blockPosX, blockDirection
-
