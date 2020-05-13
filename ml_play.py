@@ -4,227 +4,16 @@ The template of the script for the machine learning process in game pingpong
 
 # Import the necessary modules and classes
 from mlgame.communication import ml as comm
-import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from sklearn.externals import joblib
+from os import path
+import numpy as np
 import random
-from mlgame.gamedev import physics
 from pygame import Rect
 from pygame.math import Vector2
-import torch
-
-
-def ml_loop(side: str):
-    """
-    The main loop for the machine learning process
-    The `side` parameter can be used for switch the code for either of both sides,
-    so you can write the code for both sides in the same script. Such as:
-    ```python
-    if side == "1P":
-        ml_loop_for_1P()
-    else:
-        ml_loop_for_2P()
-    ```
-    @param side The side which this script is executed for. Either "1P" or "2P".
-    """
-
-    # === Here is the execution order of the loop === #
-    # 1. Put the initialization code here
-
-    # 2. Inform the game process that ml process is ready
-    ball_served = False
-    platform_1P_y = 420
-    platform_2P_y = 50
-    lastX, lastY, x, y = 100, 415, 100, 415
-    blockDirection = True
-    comm.ml_ready()
-    # 3. Start an endless loop
-    while True:
-        # 3.1. Receive the scene information sent from the game process
-        scene_info = comm.recv_from_game()
-        # 3.2. If either of two sides wins the game, do the updating or
-        #      resetting stuff and inform the game process when the ml process
-        #      is ready.
-        if scene_info["status"] != "GAME_ALIVE":
-            ball_served = False
-            NEED_SLICE = True
-            lastX, lastY, x, y = 98, 415, 98, 415
-            blockDirection = True
-            # 3.2.1. Inform the game process that ml process is ready
-            comm.ml_ready()
-            continue
-
-        # 3.3. Put the code here to handle the scene information
-        if scene_info['frame'] == 1:
-            if scene_info['blocker'][0] > last_block:
-                blockDirection = True
-            else:
-                blockDirection = False
-        if (scene_info['frame'] > 1) and (scene_info['blocker'][0] == 170 or scene_info['blocker'][0] == 0):
-            blockDirection = not blockDirection
-        last_block = scene_info["blocker"][0]
-
-        x, y = scene_info['ball']
-
-        lastRect = Rect(63, 254, 5, 5)
-        xRect = Rect(70, 247, 5, 5)
-        blockRect = Rect(160, 240, 30, 20)
-        if side == '1P':
-            #print(scene_info['ball'], scene_info['blocker'], scene_info['frame'], scene_info['platform_1P'])
-            times = (2 if scene_info['ball_speed'][1] < 0 else 1)
-            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames, _, _, _ = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times)
-            fall_point = 5 * round(fall_point / 5.0)
-            if fall_point < 20:
-                fall_point = 20
-            elif fall_point > 180:
-                fall_point = 180
-            if scene_info['ball'][1] + 5 >= 420 - scene_info['ball_speed'][1] and scene_info["platform_1P"][0] < fall_point < scene_info["platform_1P"][0] + 40:
-                case = chooseCase(d, 415, nextBlockDirection, blockPosX, scene_info, speed, scene_info['ball_speed'][1], fall_point, side)
-                action = -1
-                for i in case:
-                    if i == 1 and scene_info['platform_1P'][0] != 0:
-                        action = 1 if scene_info["ball_speed"][0] > 0 else 2
-                        break
-                    elif i == 3 and scene_info['platform_1P'][0] != 160:
-                        action = 1 if scene_info["ball_speed"][0] < 0 else 2
-                        break
-                    elif i == 2:
-                        action = 0
-                        break
-                if action == -1:
-                    action = case[-1]
-                '''if case == 1:
-                    action = 1 if scene_info["ball_speed"][0] > 0 else 2
-                elif case == 2:
-                    action = 0
-                else:
-                    action = 1 if scene_info["ball_speed"][0] < 0 else 2'''
-            elif fall_point > scene_info["platform_1P"][0] + 20:
-                action = 1
-            elif fall_point < scene_info["platform_1P"][0] + 20:
-                action = 2
-            else:
-                action = 0
-        else:
-            times = (2 if scene_info['ball_speed'][1] > 0 else 1)
-            #print(scene_info['ball'], scene_info['blocker'])
-            fall_point, d, nextBlockDirection, blockPosX, speed, _, nextFrames, _, _, _ = predict(x, y, scene_info['ball_speed'][0], scene_info['ball_speed'][1], blockDirection, scene_info['blocker'][0], times)
-            fall_point = 5 * round(fall_point / 5.0)
-            if fall_point < 20:
-                fall_point = 20
-            elif fall_point > 180:
-                fall_point = 180
-            if scene_info['ball'][1] + scene_info['ball_speed'][1] <= 80 and scene_info["platform_2P"][0] < fall_point < scene_info["platform_2P"][0] + 40: #edit
-                #case = chooseCase(d, 80, nextBlockDirection, blockPosX, scene_info, speed, scene_info['ball_speed'][1], fall_point, '2P')
-                case = random.choice([1, 2, 3])
-                '''action = -1
-                for i in case:
-                    if i == 1 and scene_info['platform_2P'][0] != 0:
-                        action = 1 if scene_info["ball_speed"][0] > 0 else 2
-                        break
-                    elif i == 3 and scene_info['platform_2P'][0] != 160:
-                        action = 1 if scene_info["ball_speed"][0] < 0 else 2
-                        break
-                    elif i == 2:
-                        action = 0
-                        break
-                if action == -1:
-                    action = case[-1]'''
-                if case == 1:
-                    action = 1 if scene_info["ball_speed"][0] > 0 else 2
-                elif case == 2:
-                    action = 0
-                else:
-                    action = 1 if scene_info["ball_speed"][0] < 0 else 2
-            elif fall_point > scene_info["platform_2P"][0] + 20:
-                action = 1
-            elif fall_point < scene_info["platform_2P"][0] + 20:
-                action = 2
-            else:
-                action = 0
-        if not ball_served:
-            comm.send_to_game({"frame": scene_info["frame"], "command": "SERVE_TO_LEFT"})
-            ball_served = True
-        else:
-            #if side == '1P':
-                #print(scene_info['frame'])
-                #print(scene_info['ball'], scene_info['platform_1P'], s_fall_point, '1p')
-                #print(scene_info['ball'], scene_info['platform_2P'], s_fall_point, '2p')
-            if action == 0:
-                comm.send_to_game({"frame": scene_info["frame"], "command": "NONE"})
-            elif action == 1:
-                comm.send_to_game({"frame": scene_info["frame"], "command": "MOVE_RIGHT"})
-            else :
-                comm.send_to_game({"frame": scene_info["frame"], "command": "MOVE_LEFT"})
-
-def old_predict(x, y, speedX, speedY, blockDirection, blockPosX, times, frames, side = '2P'):
-    pred = 0
-    bomb = False
-    num = frames
-    if speedX == 0:
-        return 100, 100, blockDirection, blockPosX, speedX, bomb, num
-    while times > 0:
-        if num % 200 == 0 and num != 0:
-            speedX = speedX + (1 if speedX > 0 else -1)
-            speedY = speedY + (1 if speedY > 0 else -1)
-        num += 1
-        lastX = x
-        lastY = y
-        x += speedX
-        y += speedY
-        if blockPosX + 3 >= 170 and blockDirection:
-            blockPosX = 170
-            blockDirection = False
-        elif blockPosX - 3 <= 0 and not blockDirection:
-            blockPosX = 0
-            blockDirection = True
-        else:
-            blockPosX = blockPosX + (3 if blockDirection else -3)
-        # ball hits the play_area
-        if x <= 0:
-            x = 0
-            speedX *= -1
-        elif x >= 195:
-            x = 195
-            speedX *= -1
-        
-        # ball hits the platform
-        if y <= 80:
-            if times != 1:
-                y = 80
-                speedY *= -1
-                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(x, y, sliceSpeed, speedY, blockDirection, blockPosX, 1, num)
-                times = 0
-            else:
-                pred = (x - speedX) + ((y - speedY) - 80) if speedX > 0 else (x - speedX) - ((y - speedY) - 80) # check
-                Rpred = x
-            times -= 1
-        elif y >= 415:
-            if times != 1:
-                y = 415
-                speedY *= -1
-                pred, Rpred, blockDirection, blockPosX, speedX, bomb, num = predict(x, y, speedX, speedY, blockDirection, blockPosX, 1, num)
-                times = 0
-            else:
-                pred = (x - speedX) + (415 - (y - speedY)) if speedX > 0 else (x - speedX) - (415 - (y - speedY)) # check
-                Rpred = x
-            times -= 1
-        # ball hits the blocker
-        lastRect = Rect(lastX, lastY, 5, 5)
-        xRect = Rect(x, y, 5, 5)
-        blockRect = Rect(blockPosX, 240, 30, 20)
-        #if (260 >= y >= 240 or 260 >= lastY >= 240) and moving_collide_or_contact(lastRect, xRect, blockRect):
-        if moving_collide_or_contact(lastRect, xRect, blockRect):
-            x, y, speedX, tmp_speedY = bounce_off_ip(x, y, speedX, speedY, blockDirection, blockPosX)
-            if times == 1 and tmp_speedY != speedY:
-                times += 1
-            elif times == 2 and tmp_speedY != speedY:
-                times -= 1
-                bomb = True
-            speedY = tmp_speedY
-    if pred < 0:
-        pred = 0
-    if pred > 195:
-        pred = 195
-    return pred, Rpred, blockDirection, blockPosX, speedX, bomb, num
+import math
 
 def predict(x, y, speedX, speedY, blockDirection, blockPosX, times, side = '2P'):
     pred = 0
@@ -859,3 +648,207 @@ def predict_blocker(blockDirection, blockPosX, length):
             blockPosX = blockPosX + (3 if blockDirection else -3)
         length -= 1
     return blockPosX, blockDirection
+
+def ml_loop(side: str):
+    """
+    The main loop for the machine learning process
+    The `side` parameter can be used for switch the code for either of both sides,
+    so you can write the code for both sides in the same script. Such as:
+    ```python
+    if side == "1P":
+        ml_loop_for_1P()
+    else:
+        ml_loop_for_2P()
+    ```
+    @param side The side which this script is executed for. Either "1P" or "2P".
+    """
+    class Model(nn.Module): #model4
+        def __init__(self, input_shape):
+            super().__init__()
+            self.nn1 = nn.Linear(input_shape, 128)
+            self.nn2 = nn.Linear(128, 256)
+            self.nn3 = nn.Linear(256, 512)
+            self.nn4 = nn.Linear(512, 1024)
+            self.nn5 = nn.Linear(1024, 1)
+        def forward(self, x):
+            x = F.relu(self.nn1(x))
+            x = F.relu(self.nn2(x))
+            x = F.relu(self.nn3(x))
+            x = F.relu(self.nn4(x))
+            x = self.nn5(x)
+            return x
+            
+ 
+    '''class Model(nn.Module): #model5
+        def __init__(self, input_shape):
+            super().__init__()
+            self.nn1 = nn.Linear(input_shape, 256)
+            self.nn2 = nn.Linear(256, 512)
+            self.nn3 = nn.Linear(512, 1024)
+            self.nn4 = nn.Linear(1024, 3)
+        def forward(self, x):
+            x = F.relu(self.nn1(x))
+            x = F.relu(self.nn2(x))
+            x = F.relu(self.nn3(x))
+            x = self.nn4(x)
+            return x'''
+    class ActionModel(nn.Module):
+        def __init__(self, input_shape):
+            super().__init__()
+            self.nn1 = nn.Linear(input_shape, 128)
+            self.nn2 = nn.Linear(128, 256)
+            self.nn3 = nn.Linear(256, 3)
+        def forward(self, x):
+            x = F.relu(self.nn1(x))
+            x = F.relu(self.nn2(x))
+            x = self.nn3(x)
+            return x
+    # === Here is the execution order of the loop === #
+    # 1. Put the initialization code here
+
+
+    ball_served = False
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    filename = path.join(path.dirname(__file__), 'save', 'model4.ckpt')
+    model = Model(6).to(device)
+    model.load_state_dict(torch.load(filename))
+    filename = path.join(path.dirname(__file__), 'save', 'nn_scaler4.pickle')
+    scaler = joblib.load(filename) 
+    filename = path.join(path.dirname(__file__), 'save', 'ActionModel5.ckpt')
+    actionModel = ActionModel(5).to(device)
+    actionModel.load_state_dict(torch.load(filename))
+    filename = path.join(path.dirname(__file__), 'save', 'ActionNN_scaler5.pickle')
+    actionScaler = joblib.load(filename) 
+
+    direction = True
+
+    def move_to(player, pred):
+    #move platform to predicted position to catch ball 
+        if player == '1P':
+            if scene_info["platform_1P"][0]+20  > (pred-10) and scene_info["platform_1P"][0]+20 < (pred+10): return 0 # NONE
+            elif scene_info["platform_1P"][0]+20 <= (pred-10) : return 1 # goes right
+            else : return 2 # goes left
+        else :
+            if scene_info["platform_2P"][0]+20  > (pred-10) and scene_info["platform_2P"][0]+20 < (pred+10): return 0 # NONE
+            elif scene_info["platform_2P"][0]+20 <= (pred-10) : return 1 # goes right
+            else : return 2 # goes left
+
+    def ml_loop_for_1P():
+        '''if scene_info['ball_speed'][0] > 0 and scene_info['ball_speed'][1] > 0:
+            ballDirection = 0
+        if scene_info['ball_speed'][0] > 0 and scene_info['ball_speed'][1] < 0:
+            ballDirection = 1
+        if scene_info['ball_speed'][0] < 0 and scene_info['ball_speed'][1] > 0:
+            ballDirection = 2
+        if scene_info['ball_speed'][0] < 0 and scene_info['ball_speed'][1] < 0:
+            ballDirection = 3'''
+        x = scene_info['ball'] + scene_info['ball_speed'] + (scene_info['blocker'][0],) + ((1,) if direction else (0,))
+        #x = scene_info['ball'] + scene_info['ball_speed'] + (scene_info['platform_1P'][0],) + (scene_info['blocker'][0],) + ((1,) if direction else (0,)) + (ballDirection,)
+        x = torch.tensor(x).reshape(1, -1)
+        x = scaler.transform(x)
+        x = torch.tensor(x).reshape(1, -1).float()
+        y = model(x)
+        '''y = torch.max(y, 1)[1]
+        if y == 0:
+            return 0
+        elif y == 1:
+            return 1
+        else:
+            return 2'''
+        y = 5 * round(y.item() / 5.0)
+        if y < 0:
+            y = 0
+        elif y > 195:
+            y = 195
+        if scene_info['ball'][1] + 5 >= 420 - scene_info['ball_speed'][1] and scene_info["platform_1P"][0] < y < scene_info["platform_1P"][0] + 40:
+            a, b = predict_blocker(blockDirection, scene_info['blocker'][0], 1)
+            case = chooseCase(scene_info['ball'][0] + scene_info['ball_speed'][0], 415, b, a, scene_info, scene_info['ball_speed'][0], scene_info['ball_speed'][1], 0, '1P')
+            action = -1
+            for i in case:
+                if i == 1 and scene_info['platform_1P'][0] != 0:
+                    action = 1 if scene_info["ball_speed"][0] > 0 else 2
+                    break
+                elif i == 3 and scene_info['platform_1P'][0] != 160:
+                    action = 1 if scene_info["ball_speed"][0] < 0 else 2
+                    break
+                elif i == 2:
+                    action = 0
+                    break
+            if action == -1:
+                action = case[-1]
+            '''if case == 1:
+                action = 1 if scene_info["ball_speed"][0] > 0 else 2
+            elif case == 2:
+                action = 0
+            else:
+                action = 1 if scene_info["ball_speed"][0] < 0 else 2'''
+        elif y > scene_info["platform_1P"][0] + 20:
+            action = 1
+        elif y < scene_info["platform_1P"][0] + 20:
+            action = 2
+        else:
+            action = 0
+        return action
+    def ml_loop_for_2P():  # as same as 1P
+        if scene_info["ball_speed"][1] > 0 : 
+            return move_to(player = '2P',pred = 100)
+        else : 
+            x = ( scene_info["platform_2P"][1]+30-scene_info["ball"][1] ) // scene_info["ball_speed"][1] 
+            pred = scene_info["ball"][0]+(scene_info["ball_speed"][0]*x) 
+            bound = pred // 200 
+            if (bound > 0):
+                if (bound%2 == 0):
+                    pred = pred - bound*200 
+                else :
+                    pred = 200 - (pred - 200*bound)
+            elif (bound < 0) :
+                if bound%2 ==1:
+                    pred = abs(pred - (bound+1) *200)
+                else :
+                    pred = pred + (abs(bound)*200)
+            return move_to(player = '2P',pred = pred)
+
+    # 2. Inform the game process that ml process is ready
+    comm.ml_ready()
+
+    # 3. Start an endless loop
+    while True:
+        # 3.1. Receive the scene information sent from the game process
+        scene_info = comm.recv_from_game()
+        if scene_info['frame'] == 1:
+            if scene_info['blocker'][0] > last_block:
+                blockDirection = True
+            else:
+                blockDirection = False
+        if (scene_info['frame'] > 1) and (scene_info['blocker'][0] == 170 or scene_info['blocker'][0] == 0):
+            blockDirection = not blockDirection
+        last_block = scene_info["blocker"][0]
+        # 3.2. If either of two sides wins the game, do the updating or
+        #      resetting stuff and inform the game process when the ml process
+        #      is ready.
+        if scene_info["status"] != "GAME_ALIVE":
+            # Do some updating or resetting stuff
+            ball_served = False
+
+            # 3.2.1 Inform the game process that
+            #       the ml process is ready for the next round
+            comm.ml_ready()
+            continue
+
+        # 3.3 Put the code here to handle the scene information
+
+        # 3.4 Send the instruction for this frame to the game process
+        if not ball_served:
+            comm.send_to_game({"frame": scene_info["frame"], "command": "SERVE_TO_LEFT"})
+            ball_served = True
+        else:
+            if side == "1P":
+                command = ml_loop_for_1P()
+            else:
+                command = ml_loop_for_2P()
+            if command == 0:
+                comm.send_to_game({"frame": scene_info["frame"], "command": "NONE"})
+            elif command == 1:
+                comm.send_to_game({"frame": scene_info["frame"], "command": "MOVE_RIGHT"})
+            else:
+                comm.send_to_game({"frame": scene_info["frame"], "command": "MOVE_LEFT"})
