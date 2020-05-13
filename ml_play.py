@@ -4,7 +4,6 @@ The template of the script for the machine learning process in game pingpong
 
 # Import the necessary modules and classes
 from mlgame.communication import ml as comm
-import torchvision
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
