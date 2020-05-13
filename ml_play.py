@@ -56,7 +56,7 @@ def ml_loop(side: str):
     model = Model(6).to(device)
     model.load_state_dict(torch.load(filename))
     filename = path.join(path.dirname(__file__), 'save', 'nn_scaler4.pickle')
-    #scaler = joblib.load(filename) 
+    scaler = joblib.load(filename) 
     filename = path.join(path.dirname(__file__), 'save', 'ActionModel2.ckpt')
     actionModel = ActionModel(5).to(device)
     actionModel.load_state_dict(torch.load(filename))
@@ -79,7 +79,7 @@ def ml_loop(side: str):
     def ml_loop_for_1P():
         x = scene_info['ball'] + scene_info['ball_speed'] + (scene_info['blocker'][0],) + ((1,) if direction else (0,))
         x = torch.tensor(x).reshape(1, -1)
-        #x = scaler.transform(x)
+        x = scaler.transform(x)
         x = torch.tensor(x).reshape(1, -1).float()
         y = model(x)
         y = 5 * round(y.item() / 5.0)
