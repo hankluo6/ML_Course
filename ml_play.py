@@ -248,21 +248,7 @@ class MLPlay:
                     elif self.car_lane < 4 and (3 not in grid) and right:
                         self.target = 'RIGHT'
                         return ['SPEED', 'MOVE_RIGHT']
-                    l = r = False
-                    for car in record[4]:
-                        if car['id'] <= 101:
-                            l = True
-                            break
-                    for car in record[6]:
-                        if car['id'] <= 101:
-                            r = True
-                            break
-                    if l and right and (3 not in grid):
-                        self.target = 'RIGHT'
-                        return ["SPEED", "MOVE_RIGHT"]
-                    elif r and left and (1 not in grid):
-                        self.target = 'LEFT'
-                        return ["SPEED", "MOVE_LEFT"]
+                    
                     # Back to lane center
                     if self.car_pos[0] != self.lanes[self.car_lane]:
                         if self.target == 'LEFT':
