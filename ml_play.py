@@ -46,7 +46,6 @@ class MLPlay:
                 grid.add(3)
                 grid.add(6)
                 grid.add(9)
-            #print( self.car_lane == 0 or self.lanes[self.car_lane - 1] - 35 <= 525 <= self.lanes[self.car_lane - 1] + 35)
             for car in scene_info["cars_info"]:
                 if car["id"] != self.player_no:
                     x = self.car_pos[0] - car["pos"][0] # x relative position
@@ -91,25 +90,26 @@ class MLPlay:
                             grid.add(11)
                             record[11].append(car)
 
-
-                    if 0 < y < 400:
+                    if 80 < y < 400:
                         if car["id"] < 101:
-                            line[car['pos'][0] // 70] = 1
+                            topLine[car['pos'][0] // 70] = 1
                         else:
-                            line[car['pos'][0]] = 1
+                            topLine[car['pos'][0]] = 1
+                    elif -80 <= y <= 80:
+                        if car["id"] < 101:
+                            midLine[car['pos'][0] // 70] = 1
+                        else:
+                            midLine[car['pos'][0]] = 1
             return move(grid = grid, speed_ahead = speed_ahead)
             
         def move(grid, speed_ahead):
-            #如果快死->硬轉
-            #if self.player_no == 0:
-                #print(grid, self.target, self.null)
             if len(grid) == 0:
-                #if self.car_lane > 4:
-                    #self.target = 'LEFT'
-                    #return ['SPEED', 'MOVE_LEFT']
-                #elif self.car_lane < 4:
-                    #self.target = 'RIGHT'
-                    #return ['SPEED', 'MOVE_RIGHT']
+                if self.car_lane > 4:
+                    self.target = 'LEFT'
+                    return ['SPEED', 'MOVE_LEFT']
+                elif self.car_lane < 4:
+                    self.target = 'RIGHT'
+                    return ['SPEED', 'MOVE_RIGHT']
                 if self.car_pos[0] != self.lanes[self.car_lane]:
                     if self.target == 'LEFT':
                         return ["SPEED", "MOVE_LEFT"]
@@ -118,27 +118,39 @@ class MLPlay:
                 self.target = 'FRONT'
                 return ["SPEED"]
             else:
-                if self.target == 'LEFT' and self.car_pos[0] > self.lanes[self.car_lane]:
+                if self.target == 'LEFT' and self.car_pos[0] > self.lanes[self.car_lane] and (10 not in grid):
                     left = True
                 else:
-                    if (4 in grid) or (10 in grid):
+                    if (4 in grid):
                         left = False
                     else:
                         for car in record[7]:
-                            if (car['velocity'] > self.car_vel and car['id'] < 101):
+                            if (car['velocity'] >= self.car_vel and car['id'] < 101) or (car['pos'][1] - self.car_pos[1] < 100):
+                                left = False
+                                break
+                        else:
+                            left = True
+                        for car in record[1]:
+                            if self.car_pos[1] - car['pos'][1] < 100 and car['velocity'] <= self.car_vel:
                                 left = False
                                 break
                         else:
                             left = True
     
-                if self.target == 'RIGHT' and self.car_pos[0] < self.lanes[self.car_lane]:
+                if self.target == 'RIGHT' and self.car_pos[0] < self.lanes[self.car_lane] and (11 not in grid):
                     right = True
                 else:
-                    if (6 in grid) or (11 in grid):
+                    if (6 in grid):
                         right = False
                     else:
                         for car in record[9]:
-                            if (car['velocity'] > self.car_vel and car['id'] < 101):
+                            if (car['velocity'] > self.car_vel and car['id'] < 101) or (car['pos'][1] - self.car_pos[1] < 100):
+                                right = False
+                                break
+                        else:
+                            right = True
+                        for car in record[3]:
+                            if self.car_pos[1] - car['pos'][1] < 100 and car['velocity'] <= self.car_vel:
                                 right = False
                                 break
                         else:
@@ -147,7 +159,7 @@ class MLPlay:
                 if (10 in grid) and (11 in grid): # car in left or right
                     if self.null != 0:
                         self.null -= 1
-                        return ['A']
+                        return [None]
                     elif self.brake != 0:
                         self.brake -= 1
                         return ['BRAKE']
@@ -169,7 +181,7 @@ class MLPlay:
                             else:
                                 self.brake = 15
                     self.speedUp = True
-                    return []
+                    return [None]
                 elif (10 in grid):
                     if right: # find top right speed
                         self.target = 'RIGHT'
@@ -177,11 +189,11 @@ class MLPlay:
                     else:
                         if self.null != 0:
                             self.null -= 1
-                            return ['A']
+                            return [None]
                         elif self.brake != 0:
                             self.brake -= 1
                             return ['BRAKE']
-                        elif self.speedUp:
+                        elif self.speedUp: #maybe brake
                             return ['SPEED']
                         self.target = 'FRONT'
                         offset = record[10][0]['pos'][1] - self.car_pos[1]
@@ -197,18 +209,15 @@ class MLPlay:
                                 else:
                                     self.brake = 15
                         self.speedUp = True
-                        return []
+                        return [None]
                 elif (11 in grid):
                     if left: # find top left speed
                         self.target = 'LEFT'
-                        #如果左邊空間很大 慢慢減速
-                        #不然就煞車
-                        #直到距離夠
                         return ['MOVE_LEFT']
                     else:
                         if self.null != 0:
                             self.null -= 1
-                            return ['A']
+                            return [None]
                         elif self.brake != 0:
                             self.brake -= 1
                             return ['BRAKE']
@@ -228,18 +237,32 @@ class MLPlay:
                                 else:
                                     self.brake = 15
                         self.speedUp = True
-                        return []
+                        return [None]
                 self.speedUp = False
                 self.null = 0
                 self.brake = 0
                 if (2 not in grid): # Check forward 
-                    if self.player_no == 0: # move to middle lane
-                        if self.car_lane > 4 and (1 not in grid) and left:
-                            self.target = 'LEFT'
-                            return ['SPEED', 'MOVE_LEFT']
-                        elif self.car_lane < 4 and (3 not in grid) and right:
-                            self.target = 'RIGHT'
-                            return ['SPEED', 'MOVE_RIGHT']
+                    if self.car_lane > 4 and (1 not in grid) and left:
+                        self.target = 'LEFT'
+                        return ['SPEED', 'MOVE_LEFT']
+                    elif self.car_lane < 4 and (3 not in grid) and right:
+                        self.target = 'RIGHT'
+                        return ['SPEED', 'MOVE_RIGHT']
+                    l = r = False
+                    for car in record[4]:
+                        if car['id'] <= 101:
+                            l = True
+                            break
+                    for car in record[6]:
+                        if car['id'] <= 101:
+                            r = True
+                            break
+                    if l and right and (3 not in grid):
+                        self.target = 'RIGHT'
+                        return ["SPEED", "MOVE_RIGHT"]
+                    elif r and left and (1 not in grid):
+                        self.target = 'LEFT'
+                        return ["SPEED", "MOVE_LEFT"]
                     # Back to lane center
                     if self.car_pos[0] != self.lanes[self.car_lane]:
                         if self.target == 'LEFT':
@@ -330,6 +353,29 @@ class MLPlay:
                                 max_speed[1] = max([car['velocity'] for car in record[2]])
                                 max_speed[2] = max([car['velocity'] for car in record[3]])
 
+                                if max(max_speed) - min(max_speed) < 2:
+                                    l, r = find_target(True, True)
+                                    if l and self.car_pos[1] - max_dis[0] >= 100:
+                                        self.target = 'LEFT'
+                                        maxSpeed = 100
+                                        for car in record[1]:
+                                            if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                                maxSpeed = car['velocity']
+                                        if self.car_vel < speed_ahead and self.car_vel < maxSpeed:
+                                            return ["SPEED", "MOVE_LEFT"]
+                                        else:
+                                            return ["BRAKE", "MOVE_LEFT"]
+                                    elif r and self.car_pos[1] - max_dis[2] >= 100:
+                                        self.target = 'RIGHT'
+                                        maxSpeed = 100
+                                        for car in record[3]:
+                                            if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                                maxSpeed = car['velocity']
+                                        if self.car_vel < speed_ahead and self.car_vel < maxSpeed:
+                                            return ["SPEED", "MOVE_RIGHT"]
+                                        else:
+                                            return ["BRAKE", "MOVE_RIGHT"]
+
                                 if max_speed[0] >= max_speed[1] and max_speed[0] >= max_speed[2] and self.car_pos[1] - max_dis[0] >= 100:
                                     self.target = 'LEFT'
                                     maxSpeed = 100
@@ -391,7 +437,7 @@ class MLPlay:
                                     return ["SPEED", "MOVE_LEFT"]
                                 else:
                                     return ["BRAKE", "MOVE_LEFT"]
-                            elif self.car_lane == 8: #判斷右前方是否撞到
+                            elif self.car_lane == 8:
                                 maxSpeed = 100
                                 for car in record[1]:
                                     if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
@@ -408,6 +454,19 @@ class MLPlay:
                                 max_speed = [0, 0]
                                 max_speed[0] = max([car['velocity'] for car in record[1]])
                                 max_speed[1] = max([car['velocity'] for car in record[2]])
+
+                                if max(max_speed) - min(max_speed) < 2:
+                                    l, _ = find_target(True, False)
+                                    if l and self.car_pos[1] - max_dis[0] >= 100:
+                                        self.target = 'LEFT'
+                                        maxSpeed = 100
+                                        for car in record[1]:
+                                            if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                                maxSpeed = car['velocity']
+                                        if self.car_vel < speed_ahead and self.car_vel < maxSpeed:
+                                            return ["SPEED", "MOVE_LEFT"]
+                                        else:
+                                            return ["BRAKE", "MOVE_LEFT"]
 
                                 if max_speed[0] >= max_speed[1] and self.car_pos[1] - max_dis[0] >= 100:
                                     self.target = 'LEFT'
@@ -449,7 +508,7 @@ class MLPlay:
                                     return ["SPEED", "MOVE_RIGHT"]
                                 else:
                                     return ["BRAKE", "MOVE_RIGHT"]
-                            elif self.car_lane == 0: #判斷右前方是否撞到
+                            elif self.car_lane == 0:
                                 maxSpeed = 100
                                 for car in record[3]:
                                     if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
@@ -466,6 +525,19 @@ class MLPlay:
                                 max_speed = [0, 0]
                                 max_speed[0] = max([car['velocity'] for car in record[2]])
                                 max_speed[1] = max([car['velocity'] for car in record[3]])
+
+                                if max(max_speed) - min(max_speed) < 2:
+                                    _, r = find_target(False, True)
+                                    if r and self.car_pos[1] - max_dis[1] >= 100:
+                                        self.target = 'RIGHT'
+                                        maxSpeed = 100
+                                        for car in record[3]:
+                                            if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                                maxSpeed = car['velocity']
+                                        if self.car_vel < speed_ahead and self.car_vel < maxSpeed:
+                                            return ["SPEED", "MOVE_RIGHT"]
+                                        else:
+                                            return ["BRAKE", "MOVE_RIGHT"]
 
                                 if max_speed[0] <= max_speed[1] and self.car_pos[1] - max_dis[1] >= 100:
                                     self.target = 'RIGHT'
@@ -553,6 +625,7 @@ class MLPlay:
                             self.target = 'RIGHT'
                             return ["SPEED", "MOVE_RIGHT"]
                         else:
+
                             max_dis = [0, 0, 0]
                             max_dis[0] = max([car['pos'][1] for car in record[1]])
                             max_dis[1] = max([car['pos'][1] for car in record[2]])
@@ -562,6 +635,29 @@ class MLPlay:
                             max_speed[0] = max([car['velocity'] for car in record[1]])
                             max_speed[1] = max([car['velocity'] for car in record[2]])
                             max_speed[2] = max([car['velocity'] for car in record[3]])
+
+                            if max(max_speed) - min(max_speed) < 2:
+                                l, r = find_target(True, True)
+                                if l and self.car_pos[1] - max_dis[0] >= 100:
+                                    self.target = 'LEFT'
+                                    maxSpeed = 100
+                                    for car in record[1]:
+                                        if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                            maxSpeed = car['velocity']
+                                    if self.car_vel < maxSpeed:
+                                        return ["SPEED", "MOVE_LEFT"]
+                                    else:
+                                        return ["BRAKE", "MOVE_LEFT"]
+                                elif r and self.car_pos[1] - max_dis[2] >= 100:
+                                    self.target = 'RIGHT'
+                                    maxSpeed = 100
+                                    for car in record[3]:
+                                        if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                            maxSpeed = car['velocity']
+                                    if self.car_vel < maxSpeed:
+                                        return ["SPEED", "MOVE_RIGHT"]
+                                    else:
+                                        return ["BRAKE", "MOVE_RIGHT"]
 
                             if max_speed[0] >= max_speed[1] and max_speed[0] >= max_speed[2] and self.car_pos[1] - max_dis[0] >= 100:
                                 self.target = 'LEFT'
@@ -615,14 +711,13 @@ class MLPlay:
                                     return ["BRAKE", "MOVE_RIGHT"]
                     if left:
                         if self.car_lane == 1: # prevent to the leftmost
-                            if self.car_vel < speed_ahead:
-                                return ["SPEED"]
-                            else:
-                                return ["BRAKE"]
+                            return ["SPEED"]
                         elif (1 not in grid):
                             self.target = 'LEFT'
                             return ["SPEED", "MOVE_LEFT"]
                         else:
+                            if (3 not in grid):
+                                return ["SPEED"]
                             max_dis = [0, 0]
                             max_dis[0] = max([car['pos'][1] for car in record[1]])
                             max_dis[1] = max([car['pos'][1] for car in record[2]])
@@ -630,6 +725,19 @@ class MLPlay:
                             max_speed = [0, 0]
                             max_speed[0] = max([car['velocity'] for car in record[1]])
                             max_speed[1] = max([car['velocity'] for car in record[2]])
+
+                            if max(max_speed) - min(max_speed) < 2:
+                                l, _ = find_target(True, False)
+                                if l and self.car_pos[1] - max_dis[0] >= 100:
+                                    self.target = 'LEFT'
+                                    maxSpeed = 100
+                                    for car in record[1]:
+                                        if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                            maxSpeed = car['velocity']
+                                    if self.car_vel < maxSpeed:
+                                        return ["SPEED", "MOVE_LEFT"]
+                                    else:
+                                        return ["BRAKE", "MOVE_LEFT"] 
 
                             if max_speed[0] >= max_speed[1] and self.car_pos[1] - max_dis[0] >= 100:
                                 self.target = 'LEFT'
@@ -660,14 +768,13 @@ class MLPlay:
                                 return ["SPEED"]
                     if right:
                         if self.car_lane == 7: # prevent to the rightmost
-                            if self.car_vel < speed_ahead:
-                                return ["SPEED"]
-                            else:
-                                return ["BRAKE"]
+                            return ["SPEED"]
                         elif (3 not in grid):
                             self.target = 'RIGHT'
                             return ["SPEED", "MOVE_RIGHT"]
                         else:
+                            if (1 not in grid):
+                                return ["SPEED"]
                             max_dis = [0, 0]
                             max_dis[0] = max([car['pos'][1] for car in record[2]])
                             max_dis[1] = max([car['pos'][1] for car in record[3]])
@@ -675,6 +782,19 @@ class MLPlay:
                             max_speed = [0, 0]
                             max_speed[0] = max([car['velocity'] for car in record[2]])
                             max_speed[1] = max([car['velocity'] for car in record[3]])
+
+                            if max(max_speed) - min(max_speed) < 2:
+                                _, r = find_target(False, True)
+                                if r and self.car_pos[1] - max_dis[1] >= 100:
+                                    self.target = 'RIGHT'
+                                    maxSpeed = 100
+                                    for car in record[3]:
+                                        if self.car_pos[1] - car["pos"][1] < 200 and maxSpeed > car['velocity']:
+                                            maxSpeed = car['velocity']
+                                    if self.car_vel < maxSpeed:
+                                        return ["SPEED", "MOVE_RIGHT"]
+                                    else:
+                                        return ["BRAKE", "MOVE_RIGHT"]
 
                             if max_speed[0] <= max_speed[1] and self.car_pos[1] - max_dis[1] >= 100:
                                 self.target = 'RIGHT'
@@ -710,34 +830,44 @@ class MLPlay:
                     
 
         
-        def find_target():
+        def find_target(left, right):
             target = self.car_pos[0]
             tmp = target // 70
-            hasRight = False
-            hasLeft = False
-            right = 0
-            left = 0
-            for i in range(tmp, 9):
-                if line[i * 70 + 35] == 0:
-                    target = i * 70 + 35
-                    right = target
-                    hasRight = i
-                    break
+            l = r = hasLeft = hasRight = False
+            if right:
+                imRight = False
+                for i in range(tmp + 1, 9): 
+                    if midLine[i * 70 + 35] == 1:
+                        imRight = True
+                    if midLine[i * 70 + 35] == 0 and topLine[i * 70 + 35] == 0 and not imRight:
+                        r = True
+                        break
+                if tmp + 2 < 9 and midLine[(tmp + 2) * 70 + 35] == 0:
+                    hasRight = True
             else:
-                hasRight = 9
-            for i in range(tmp, -1, -1):
-                if line[i * 70 + 35] == 0:
-                    target = i * 70 + 35
-                    left = target
-                    hasLeft = i
-                    break
+                r = False
+            if left:
+                imLeft = False
+                for i in range(tmp - 1, -1, -1):
+                    if midLine[i * 70 + 35] == 1:
+                        imLeft = True
+                    if midLine[i * 70 + 35] == 0 and topLine[i * 70 + 35] == 0 and not imLeft:
+                        l = True
+                        break
+                if tmp - 2 >= 0 and midLine[(tmp - 2) * 70 + 35] == 0:
+                    hasLeft = True
             else:
-                hasLeft = -1
-            return [left, right, hasLeft, hasRight]
+                l = False
+
+            if not l and not r:
+                return [hasLeft, hasRight]
+
+            return [l, r]
 
 
-        line = {35:0, 105:0, 175:0, 245:0, 315:0, 385:0, 455:0, 525:0, 595:0}
-        
+        topLine = {35:0, 105:0, 175:0, 245:0, 315:0, 385:0, 455:0, 525:0, 595:0}
+        midLine = {35:0, 105:0, 175:0, 245:0, 315:0, 385:0, 455:0, 525:0, 595:0}
+
         record = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[], 7:[], 8:[], 9:[], 10:[], 11:[]}
         
         if len(scene_info[self.player]) != 0:
