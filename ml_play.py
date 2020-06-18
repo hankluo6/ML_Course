@@ -51,21 +51,36 @@ class MLPlay:
                     x = self.car_pos[0] - car["pos"][0] # x relative position
                     y = self.car_pos[1] - car["pos"][1] # y relative position
                     if self.lanes[self.car_lane] - 35 <= car['pos'][0] <= self.lanes[self.car_lane] + 35:
-                        if 0 <= y <= 300:
-                            grid.add(2)
-                            record[2].append(car)
-                            if y < 200:
-                                if speed_ahead > car["velocity"]:
-                                    speed_ahead = car["velocity"]
-                                grid.add(5)
-                                record[5].append(car)
+                        if self.car_pos[1] > 600:
+                            if 0 <= y <= 500:
+                                grid.add(2)
+                                record[2].append(car)
+                                if y < 200:
+                                    if speed_ahead > car["velocity"]:
+                                        speed_ahead = car["velocity"]
+                                    grid.add(5)
+                                    record[5].append(car)
+                        else:
+                            if 0 <= y <= 300:
+                                grid.add(2)
+                                record[2].append(car)
+                                if y < 200:
+                                    if speed_ahead > car["velocity"]:
+                                        speed_ahead = car["velocity"]
+                                    grid.add(5)
+                                    record[5].append(car)
                         if -200 < y < 0:
                             grid.add(8)
                             record[8].append(car)
                     if self.car_lane == 8 or self.lanes[self.car_lane + 1] - 35 <= car['pos'][0] <= self.lanes[self.car_lane + 1] + 35:
-                        if 80 < y < 300:
-                            grid.add(3)
-                            record[3].append(car)
+                        if self.car_pos[1] > 600:
+                            if 80 < y < 500:
+                                grid.add(3)
+                                record[3].append(car)
+                        else:
+                            if 80 < y < 300:
+                                grid.add(3)
+                                record[3].append(car)
                         elif -80 <= y <= 80:
                             grid.add(6)
                             record[6].append(car)
@@ -73,9 +88,14 @@ class MLPlay:
                             grid.add(9)
                             record[9].append(car)
                     if self.car_lane == 0 or self.lanes[self.car_lane - 1] - 35 <= car['pos'][0] <= self.lanes[self.car_lane - 1] + 35:
-                        if 80 < y < 300:
-                            grid.add(1)
-                            record[1].append(car)
+                        if self.car_pos[1] > 600:
+                            if 80 < y < 500:
+                                grid.add(1)
+                                record[1].append(car)
+                        else:
+                            if 80 < y < 300:
+                                grid.add(1)
+                                record[1].append(car)
                         elif -80 <= y <= 80:
                             grid.add(4)
                             record[4].append(car)
