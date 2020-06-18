@@ -81,7 +81,7 @@ class MLPlay:
                             if 80 < y < 300:
                                 grid.add(3)
                                 record[3].append(car)
-                        elif -80 <= y <= 80:
+                        if -80 <= y <= 80:
                             grid.add(6)
                             record[6].append(car)
                         elif -300 < y < -80:
@@ -96,7 +96,7 @@ class MLPlay:
                             if 80 < y < 300:
                                 grid.add(1)
                                 record[1].append(car)
-                        elif -80 <= y <= 80:
+                        if -80 <= y <= 80:
                             grid.add(4)
                             record[4].append(car)
                         elif -300 < y < -80:
