@@ -478,22 +478,16 @@ class MLPlay:
                             empty = True'''
                 if 80 < self.car_pos[1] - car['pos'][1] < 200 and car['pos'][0] - 46 <= self.car_pos[0] <= car['pos'][0] + 46: #change
                     if car['velocity'] < self.car_vel:
-                        if car in brakeCar:
-                            brake = True
                         elif follow(car) == 'BRAKE':
                             brake = True
                         elif follow(car) == None:
                             empty = True
                 elif 80 < self.car_pos[1] - car['pos'][1] < 350 and car['pos'][0] - 46 <= self.car_pos[0] <= car['pos'][0] + 46:
                     if car['velocity'] < self.car_vel:
-                        if car in brakeCar:
-                            brake = True
                         elif follow(car) == 'BRAKE':
                             brake = True
                         elif follow(car) == None:
                             empty = True
-                    if car['id'] in brakeCar:
-                        brake = True
             if 'MOVE_LEFT' not in returnAns and 'MOVE_RIGHT' not in returnAns and not catchCoin: # no near coin 
                 if 2 not in grid and 5 not in grid:
                     minVal = 1e9
@@ -507,11 +501,6 @@ class MLPlay:
                         if self.car_pos[0] < scene_info['player' + str(idx)][0]:
                             returnAns.append('MOVE_RIGHT')
                         else:
-                            returnAns.append('MOVE_LEFT')
-                    else:
-                        if self.car_lane == 0 and right:
-                            returnAns.append('MOVE_RIGHT')
-                        elif self.car_lane == 8 and left:
                             returnAns.append('MOVE_LEFT')
                         #state = self.car_pos[0] % 3
                         #if state == 0:
