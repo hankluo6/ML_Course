@@ -478,13 +478,13 @@ class MLPlay:
                             empty = True'''
                 if 80 < self.car_pos[1] - car['pos'][1] < 200 and car['pos'][0] - 46 <= self.car_pos[0] <= car['pos'][0] + 46: #change
                     if car['velocity'] < self.car_vel:
-                        elif follow(car) == 'BRAKE':
+                        if follow(car) == 'BRAKE':
                             brake = True
                         elif follow(car) == None:
                             empty = True
                 elif 80 < self.car_pos[1] - car['pos'][1] < 350 and car['pos'][0] - 46 <= self.car_pos[0] <= car['pos'][0] + 46:
                     if car['velocity'] < self.car_vel:
-                        elif follow(car) == 'BRAKE':
+                        if follow(car) == 'BRAKE':
                             brake = True
                         elif follow(car) == None:
                             empty = True
