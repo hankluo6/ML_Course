@@ -254,7 +254,7 @@ class MLPlay:
                 returnAns.append('MOVE_LEFT')
             else:
                 for coin in scene_info['coins']:
-                    if coin[1] <= self.car_pos[1]:
+                    if 0 <= self.car_pos[1] - coin[1] <= 400:
                         frame = abs(coin[0] + 10 - self.car_pos[0]) / 3
                         target_y = predict_y(frame)
                         if target_y > coin[1] + 5 * frame: # can arrive
@@ -305,7 +305,7 @@ class MLPlay:
                                         target = coin[0] + 10
                                     else:
                                         target = coin[0] + 10 - 1
-                if target == -1:
+                if target == -1 and self.car_pos[1] < 550:
                     for coin in right_coin:
                         coin_lane = coin[0] // 70
                         for car in scene_info['cars_info']:
